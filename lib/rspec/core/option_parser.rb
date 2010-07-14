@@ -85,11 +85,15 @@ module RSpec::Core
         parser.on('-X', '--drb', 'Run examples via DRb') do |o|
           options[:drb] = true
         end
+        
+        parser.on('--configure COMMAND', 'Generate configuration files') do |cmd|
+          CommandLineConfiguration.new(cmd).run
+          exit
+        end
 
         parser.on('--drb-port [PORT]', 'Port to connect to on the DRb server') do |o|
           options[:drb_port] = o.to_i
         end
-
       end
     end
   end
