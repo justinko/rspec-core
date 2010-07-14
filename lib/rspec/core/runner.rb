@@ -4,22 +4,22 @@ module RSpec
   module Core
     class Runner
 
-      def self.at_exit_hook_disabled?
-        @no_at_exit_hook ||= false
+      def self.autorun
+        return if autorun_disabled? || installed_at_exit? || running_in_drb?
+        @installed_at_exit = true
+        at_exit { run(ARGV, $stderr, $stdout) ? exit(0) : exit(1) }
       end
 
-      def self.disable_at_exit_hook!
-        @no_at_exit_hook = true
+      def self.autorun_disabled?
+        @autorun_disabled ||= false
+      end
+
+      def self.disable_autorun!
+        @autorun_disabled = true
       end
 
       def self.installed_at_exit?
         @installed_at_exit ||= false
-      end
-
-      def self.autorun
-        return if at_exit_hook_disabled? || installed_at_exit? || running_in_drb?
-        @installed_at_exit = true
-        at_exit { run(ARGV, $stderr, $stdout) ? exit(0) : exit(1) }
       end
 
       def self.running_in_drb?
@@ -43,7 +43,7 @@ module RSpec
       end
 
       def self.run_in_process(options, err, out)
-        CommandLine.new(options).run(err, out)
+        CommandLine.new(options, RSpec::configuration, RSpec::world).run(err, out)
       end
 
     end

@@ -80,7 +80,11 @@ module RSpec
       end
 
       def attribute_of_subject
-        original_subject.send(example.description) if using_attribute?
+        if using_attribute?
+          example.description.split('.').inject(original_subject) do |target, method|
+            target.send(method)
+          end
+        end
       end
 
       def using_attribute?

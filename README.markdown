@@ -63,10 +63,22 @@ Use the documentation formatter to see the resulting spec:
     Finished in 0.000379 seconds
     1 example, 0 failures
 
-#### Also see
+## Learn more
+
+While not comprehensive yet, you can learn quite a lot from the Cucumber
+features in the [features
+directory](http://github.com/rspec/rspec-core/tree/master/features/).  If there
+is a feature that is not documented there, or you find them insufficient to
+understand how to use a feature, please submit issues to
+[http://github.com/rspec/rspec-core/issues](http://github.com/rspec/rspec-core/issues).
+
+## Contribute
+
+See [http://github.com/rspec/rspec-dev](http://github.com/rspec/rspec-dev)
+
+## Also see
 
 * [http://github.com/rspec/rspec](http://github.com/rspec/rspec)
 * [http://github.com/rspec/rspec-expectations](http://github.com/rspec/rspec-expectations)
 * [http://github.com/rspec/rspec-mocks](http://github.com/rspec/rspec-mocks)
-* [http://github.com/rspec/rspec-dev](http://github.com/rspec/rspec-dev)
 

@@ -40,7 +40,7 @@ module RSpec::Core
    
     context "setting the files to run" do
 
-      it "should load files not following pattern if named explicitly" do
+      it "loads files not following pattern if named explicitly" do
         file = "./spec/rspec/core/resources/a_bar.rb"
         config.files_or_directories_to_run = file
         config.files_to_run.should == [file]
@@ -48,10 +48,16 @@ module RSpec::Core
 
       describe "with default --pattern" do
 
-        it "should load files named _spec.rb" do
+        it "loads files named _spec.rb" do
           dir = "./spec/rspec/core/resources"
           config.files_or_directories_to_run = dir
           config.files_to_run.should == ["#{dir}/a_spec.rb"]
+        end
+
+        it "loads files in Windows" do
+          file = "C:\\path\\to\\project\\spec\\sub\\foo_spec.rb"
+          config.files_or_directories_to_run = file
+          config.files_to_run.should == [file]
         end
 
       end
@@ -134,19 +140,22 @@ module RSpec::Core
 
       context "with no filter" do
         it "includes the given module into each example group" do
-          config.include(InstanceLevelMethods)
-          
+          RSpec.configure do |c|
+            c.include(InstanceLevelMethods)
+          end
+
           group = ExampleGroup.describe('does like, stuff and junk', :magic_key => :include) { }
           group.should_not respond_to(:you_call_this_a_blt?)
           group.new.you_call_this_a_blt?.should == "egad man, where's the mayo?!?!?"
         end
-        
       end
 
       context "with a filter" do
         it "includes the given module into each matching example group" do
-          config.include(InstanceLevelMethods, :magic_key => :include)
-          
+          RSpec.configure do |c|
+            c.include(InstanceLevelMethods, :magic_key => :include)
+          end
+
           group = ExampleGroup.describe('does like, stuff and junk', :magic_key => :include) { }
           group.should_not respond_to(:you_call_this_a_blt?)
           group.new.you_call_this_a_blt?.should == "egad man, where's the mayo?!?!?"
@@ -163,7 +172,10 @@ module RSpec::Core
       end
 
       it "should extend the given module into each matching example group" do
-        config.extend(ThatThingISentYou, :magic_key => :extend)      
+        RSpec.configure do |c|
+          c.extend(ThatThingISentYou, :magic_key => :extend)      
+        end
+
         group = ExampleGroup.describe(ThatThingISentYou, :magic_key => :extend) { }
         group.should respond_to(:that_thing)
       end
@@ -247,11 +259,17 @@ module RSpec::Core
       end
       
       it "sets a formatter based on its class name" do
-        Object.const_set("CustomFormatter",Class.new(Formatters::BaseFormatter))
+        Object.const_set("CustomFormatter", Class.new(Formatters::BaseFormatter))
         config.formatter = "CustomFormatter"
         config.formatter.should be_an_instance_of(CustomFormatter)
       end
-      
+
+      it "sets a formatter based on its class fully qualified name" do
+        RSpec.const_set("CustomFormatter", Class.new(Formatters::BaseFormatter))
+        config.formatter = "RSpec::CustomFormatter"
+        config.formatter.should be_an_instance_of(RSpec::CustomFormatter)
+      end
+
       it "raises ArgumentError if formatter is unknown" do
         lambda { config.formatter = :progresss }.should raise_error(ArgumentError)
       end
@@ -277,13 +295,13 @@ module RSpec::Core
         config.line_number = '37'
         config.filter.should == {:line_number => 37}
       end
-      
+
       it "overrides :focused" do
         config.filter_run :focused => true
         config.line_number = '37'
         config.filter.should == {:line_number => 37}
       end
-      
+
       it "prevents :focused" do
         config.line_number = '37'
         config.filter_run :focused => true
@@ -292,17 +310,17 @@ module RSpec::Core
     end
 
     describe "full_backtrace=" do
-      before do
-        @backtrace_clean_patterns = config.backtrace_clean_patterns
-      end
-
-      after do
-        config.backtrace_clean_patterns = @backtrace_clean_patterns
-      end
-
       it "clears the backtrace clean patterns" do
         config.full_backtrace = true
         config.backtrace_clean_patterns.should == []
+      end
+
+      it "doesn't impact other instances of config" do
+        config_1 = Configuration.new
+        config_2 = Configuration.new
+
+        config_1.full_backtrace = true
+        config_2.backtrace_clean_patterns.should_not be_empty
       end
     end
 
@@ -319,7 +337,7 @@ module RSpec::Core
         config.debug = false
       end
     end
-    
+
     describe "#output=" do
       it "sets the output" do
         output = mock("output")
@@ -372,9 +390,19 @@ module RSpec::Core
             config.custom_option?.should be_true
           end
 
-          it "can be overridden" do
+          it "can be overridden with a truthy value" do
             config.custom_option = "a new value"
             config.custom_option.should eq("a new value")
+          end
+
+          it "can be overridden with nil" do
+            config.custom_option = nil
+            config.custom_option.should eq(nil)
+          end
+
+          it "can be overridden with false" do
+            config.custom_option = false
+            config.custom_option.should eq(false)
           end
         end
       end

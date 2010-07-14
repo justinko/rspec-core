@@ -18,8 +18,16 @@ module RSpec
           @pending_examples ||= ::RSpec.world.find(examples, :execution_result => { :status => 'pending' })
         end
 
+        def pending_count
+          pending_examples.size
+        end
+
         def failed_examples
           @failed_examples ||= ::RSpec.world.find(examples, :execution_result => { :status => 'failed' })
+        end
+
+        def failure_count
+          failed_examples.size
         end
 
         def report(count)
@@ -50,14 +58,27 @@ module RSpec
           @duration = Time.now - @start
         end
 
-        def example_finished(example)
+        def example_started(example)
           examples << example
+        end
+
+        def example_passed(example)
+        end
+
+        def example_pending(example)
+        end
+
+        def example_failed(example)
+        end
+
+        def message(message)
         end
 
         # This method is invoked at the beginning of the execution of each example group.
         # +example_group+ is the example_group.
         #
-        # The next method to be invoked after this is #example_failed or #example_finished
+        # The next method to be invoked after this is +example_passed+,
+        # +example_pending+, or +example_finished+
         def add_example_group(example_group)
           @example_group = example_group
         end
@@ -134,7 +155,7 @@ module RSpec
             old_sync, output.sync = output.sync, true if output_supports_sync
             yield
           ensure
-            output.sync = old_sync if output_supports_sync
+            output.sync = old_sync if output_supports_sync and !output.closed?
           end
         end
 

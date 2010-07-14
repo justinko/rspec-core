@@ -1,12 +1,17 @@
 require "spec_helper"
 require "stringio"
+require 'tmpdir'
 
 module RSpec::Core
   describe CommandLine do
-    context "given an array" do
-      it "converts the contents to a ConfigurationOptions object" do
-        command_line = CommandLine.new(%w[--color])
-        command_line.instance_eval { @options }.should be_a(ConfigurationOptions)
+    context "given an Array of options" do
+      it "assigns ConfigurationOptions built from Array to @options" do
+        config_options = ConfigurationOptions.new(%w[--color])
+        config_options.parse_options
+
+        array_options = %w[--color]
+        command_line = CommandLine.new(array_options)
+        command_line.instance_eval { @options.options }.should eq(config_options.options)
       end
     end
 
@@ -27,7 +32,7 @@ module RSpec::Core
       end
 
       let(:command_line) do
-        CommandLine.new(config_options)
+        CommandLine.new(config_options, config)
       end
 
       let(:config) do
@@ -37,7 +42,6 @@ module RSpec::Core
       let(:out) { ::StringIO.new }
 
       before do
-        command_line.stub(:configuration) { config }
         config.stub(:run_hook)
       end
 
@@ -67,6 +71,43 @@ module RSpec::Core
         after_suite_called.should be_true
       end
     end
+    
+    describe "#run with custom output" do
+      let(:config_options) do
+        config_options = ConfigurationOptions.new(%w[--color])
+        config_options.parse_options
+        config_options
+      end
 
+      let(:command_line) do
+        CommandLine.new(config_options, config)
+      end
+
+      let(:output_file_path) do
+        Dir.tmpdir + "/command_line_spec_output.txt"
+      end
+      
+      let(:output_file) do
+        File.new(output_file_path, 'w')
+      end
+      
+      let(:config) do
+        config = RSpec::Core::Configuration.new
+        config.output_stream = output_file
+        config
+      end
+
+      let(:out) { ::StringIO.new }
+
+      before do
+        config.stub(:run_hook)
+      end
+      
+      it "doesn't override output_stream" do
+        command_line.run(out, out)
+        command_line.instance_eval { @configuration.output_stream }.should eql(output_file)
+      end
+    end
+    
   end
 end

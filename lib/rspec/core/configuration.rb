@@ -12,7 +12,7 @@ module RSpec
           alias_method "#{name}?", "#{opts[:alias]}?"
         else
           define_method("#{name}=") {|val| settings[name] = val}
-          define_method(name) { settings.has_key?(name) ? settings[name] : opts[:default] }
+          define_method(name)       { settings.has_key?(name) ? settings[name] : opts[:default] }
           define_method("#{name}?") { !!(send name) }
         end
       end
@@ -40,7 +40,7 @@ module RSpec
         /bin\/spec/,
         /lib\/rspec\/(core|expectations|matchers|mocks)/
       ]
-    
+
       # :call-seq:
       #   add_setting(:name)
       #   add_setting(:name, :default => "default_value")
@@ -91,12 +91,16 @@ module RSpec
         @settings ||= {}
       end
 
-      def clear_inclusion_filter
+      def clear_inclusion_filter # :nodoc:
         self.filter = nil
       end
 
       def cleaned_from_backtrace?(line)
         backtrace_clean_patterns.any? { |regex| line =~ regex }
+      end
+
+      def mock_with(mock_framework)
+        settings[:mock_framework] = mock_framework
       end
 
       def require_mock_framework_adapter
@@ -115,7 +119,7 @@ module RSpec
       end
 
       def full_backtrace=(bool)
-        backtrace_clean_patterns.clear
+        settings[:backtrace_clean_patterns] = []
       end
 
       def color_enabled=(bool)
@@ -169,14 +173,18 @@ EOM
       end
       
       def formatter=(formatter_to_use)
-        if string_const?(formatter_to_use) && Object.const_defined?(formatter_to_use)
-          formatter_class = Object.const_get(formatter_to_use)
+        if string_const?(formatter_to_use) && (class_name = eval(formatter_to_use)).is_a?(Class)
+          formatter_class = class_name
         elsif formatter_to_use.is_a?(Class)
           formatter_class = formatter_to_use
         else
           formatter_class = case formatter_to_use.to_s
           when 'd', 'doc', 'documentation', 's', 'n', 'spec', 'nested'
             RSpec::Core::Formatters::DocumentationFormatter
+          when 'h', 'html'
+            RSpec::Core::Formatters::HtmlFormatter
+          when 't', 'textmate'
+            RSpec::Core::Formatters::TextMateFormatter
           when 'progress' 
             RSpec::Core::Formatters::ProgressFormatter
           else 
@@ -197,18 +205,20 @@ EOM
       alias_method :reporter, :formatter
 
       def files_or_directories_to_run=(*files)
-        self.files_to_run = files.flatten.inject([]) do |result, file|
+        self.files_to_run = files.flatten.collect do |file|
           if File.directory?(file)
-            filename_pattern.split(",").each do |pattern|
-              result += Dir["#{file}/#{pattern.strip}"]
+            filename_pattern.split(",").collect do |pattern|
+              Dir["#{file}/#{pattern.strip}"]
             end
           else
-            path, line_number = file.split(':')
-            self.line_number = line_number if line_number
-            result << path
+            if file =~ /(\:(\d+))$/
+              self.line_number = $2
+              file.sub($1,'')
+            else
+              file
+            end
           end
-          result
-        end
+        end.flatten
       end
 
       # E.g. alias_example_to :crazy_slow, :speed => 'crazy_slow' defines
@@ -218,6 +228,7 @@ EOM
       end
 
       def filter_run_including(options={})
+        # TODO (DC 2010-07-03) this should probably warn when the unless clause returns true
         self.filter = options unless filter and filter[:line_number] || filter[:full_description]
       end
 

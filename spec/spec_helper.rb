@@ -1,19 +1,6 @@
-require 'rubygems'
-
-$LOAD_PATH.unshift(File.expand_path('../../lib', __FILE__))
+# TODO (DC 2010-07-04) This next line is necessary when running 'rake spec'.
+# Why doesn't the rspec-core ref in Gemfile handle this.
 require 'rspec/core'
-
-$LOAD_PATH << File.expand_path('../../../rspec-expectations/lib', __FILE__)
-$LOAD_PATH << File.expand_path('../../../rspec-mocks/lib', __FILE__)
-require 'rspec/expectations'
-require 'rspec/mocks'
-
-begin
-  require 'autotest'
-rescue LoadError
-  raise "Could not load autotest."
-end
-
 require 'autotest/rspec2'
 
 Dir['./spec/support/**/*.rb'].map {|f| require f}
@@ -44,6 +31,25 @@ class RSpec::Core::ExampleGroup
   end
 end
 
+def sandboxed(&block)
+  begin
+    @orig_config = RSpec.configuration
+    @orig_world  = RSpec.world
+    new_config = RSpec::Core::Configuration.new
+    new_world  = RSpec::Core::World.new(new_config)
+    RSpec.instance_variable_set(:@configuration, new_config)
+    RSpec.instance_variable_set(:@world, new_world)
+    object = Object.new
+    object.extend(RSpec::Core::ObjectExtensions)
+    object.extend(RSpec::Core::SharedExampleGroup)
+
+    object.instance_eval(&block)
+  ensure
+    RSpec.instance_variable_set(:@configuration, @orig_config)
+    RSpec.instance_variable_set(:@world, @orig_world)
+  end
+end
+
 def in_editor?
   ENV.has_key?('TM_MODE') || ENV.has_key?('EMACS') || ENV.has_key?('VIM')
 end
@@ -54,17 +60,13 @@ RSpec.configure do |c|
   c.run_all_when_everything_filtered = true
   c.filter_run_excluding :ruby => lambda {|version|
     case version.to_s
-    when "!ruby"
+    when "!jruby"
       RUBY_ENGINE != "jruby"
     else
       !(RUBY_VERSION.to_s =~ /^#{version.to_s}/)
     end
   }
-  c.before(:each) do
-    @real_world = RSpec.world
-    RSpec.instance_variable_set(:@world, RSpec::Core::World.new)
-  end
-  c.after(:each) do
-    RSpec.instance_variable_set(:@world, @real_world)
+  c.around do |example|
+    sandboxed { example.run }
   end
 end

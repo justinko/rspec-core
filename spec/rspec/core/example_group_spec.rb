@@ -29,6 +29,26 @@ module RSpec::Core
         examples_run.should have(1).example
       end
 
+      context "with a failure in the top level group" do
+        it "runs its children " do
+          examples_run = []
+          group = ExampleGroup.describe("parent") do
+            it "fails" do
+              examples_run << example
+              raise "fail"
+            end
+            describe("child") do
+              it "does something" do
+                examples_run << example
+              end
+            end
+          end
+
+          group.run_all
+          examples_run.should have(2).examples
+        end
+      end
+
       describe "descendants" do
         it "returns self + all descendants" do
           group = ExampleGroup.describe("parent") do
@@ -490,6 +510,18 @@ module RSpec::Core
           end.new
         end
         its(:nil_value) { should be_nil }
+      end
+
+      context "with nested attributes" do
+        subject do
+          Class.new do
+            def name
+              "John"
+            end
+          end.new
+        end
+        its("name.size") { should == 4 }
+        its("name.size.class") { should == Fixnum }
       end
     end
 
