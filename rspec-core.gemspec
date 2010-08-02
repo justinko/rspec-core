@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{rspec-core}
-  s.version = "2.0.0.beta.17"
+  s.version = "2.0.0.beta.19"
 
   s.required_rubygems_version = Gem::Requirement.new("> 1.3.1") if s.respond_to? :required_rubygems_version=
   s.authors = ["Chad Humphries", "David Chelimsky"]
-  s.date = %q{2010-07-11}
+  s.date = %q{2010-07-27}
   s.default_executable = %q{rspec}
   s.description = %q{RSpec runner and example groups}
   s.email = %q{dchelimsky@gmail.com;chad.humphries@gmail.com}
@@ -32,6 +32,7 @@ Gem::Specification.new do |s|
      "bin/rspec",
      "cucumber.yml",
      "features/README.markdown",
+     "features/command_line/configure.feature",
      "features/command_line/example_name_option.feature",
      "features/command_line/exit_status.feature",
      "features/command_line/line_number_appended_to_path.feature",
@@ -40,6 +41,7 @@ Gem::Specification.new do |s|
      "features/configuration/options_file.feature",
      "features/example_groups/describe_aliases.feature",
      "features/example_groups/nested_groups.feature",
+     "features/example_groups/shared_example_group.feature",
      "features/filtering/inclusion_filters.feature",
      "features/formatters/custom_formatter.feature",
      "features/hooks/around_hooks.feature",
@@ -51,6 +53,8 @@ Gem::Specification.new do |s|
      "features/mock_framework_integration/use_rr.feature",
      "features/mock_framework_integration/use_rspec.feature",
      "features/pending/pending_examples.feature",
+     "features/spec_files/arbitrary_file_suffix.feature",
+     "features/subject/attribute_of_subject.feature",
      "features/subject/explicit_subject.feature",
      "features/subject/implicit_subject.feature",
      "features/support/env.rb",
@@ -60,6 +64,7 @@ Gem::Specification.new do |s|
      "lib/rspec/core/around_proxy.rb",
      "lib/rspec/core/backward_compatibility.rb",
      "lib/rspec/core/command_line.rb",
+     "lib/rspec/core/command_line_configuration.rb",
      "lib/rspec/core/configuration.rb",
      "lib/rspec/core/configuration_options.rb",
      "lib/rspec/core/deprecation.rb",
@@ -90,6 +95,7 @@ Gem::Specification.new do |s|
      "lib/rspec/core/option_parser.rb",
      "lib/rspec/core/pending.rb",
      "lib/rspec/core/rake_task.rb",
+     "lib/rspec/core/reporter.rb",
      "lib/rspec/core/ruby_project.rb",
      "lib/rspec/core/runner.rb",
      "lib/rspec/core/shared_example_group.rb",
@@ -102,6 +108,7 @@ Gem::Specification.new do |s|
      "script/console",
      "spec/autotest/failed_results_re_spec.rb",
      "spec/autotest/rspec_spec.rb",
+     "spec/rspec/core/command_line_configuration_spec.rb",
      "spec/rspec/core/command_line_spec.rb",
      "spec/rspec/core/command_line_spec_output.txt",
      "spec/rspec/core/configuration_options_spec.rb",
@@ -124,12 +131,14 @@ Gem::Specification.new do |s|
      "spec/rspec/core/formatters/text_mate_formatted-1.8.7.html",
      "spec/rspec/core/formatters/text_mate_formatted-1.9.2.html",
      "spec/rspec/core/formatters/text_mate_formatter_spec.rb",
+     "spec/rspec/core/hooks_filtering_spec.rb",
      "spec/rspec/core/hooks_spec.rb",
      "spec/rspec/core/kernel_extensions_spec.rb",
      "spec/rspec/core/let_spec.rb",
      "spec/rspec/core/metadata_spec.rb",
      "spec/rspec/core/option_parser_spec.rb",
      "spec/rspec/core/pending_example_spec.rb",
+     "spec/rspec/core/reporter_spec.rb",
      "spec/rspec/core/resources/a_bar.rb",
      "spec/rspec/core/resources/a_foo.rb",
      "spec/rspec/core/resources/a_spec.rb",
@@ -149,18 +158,22 @@ Gem::Specification.new do |s|
   s.homepage = %q{http://github.com/rspec/rspec-core}
   s.post_install_message = %q{**************************************************
 
-  Thank you for installing rspec-core-2.0.0.beta.17
-  
+  Thank you for installing rspec-core-2.0.0.beta.19
+
+  Please be sure to look at Upgrade.markdown to see what might have changed
+  since the last release.
+
 **************************************************
 }
   s.rdoc_options = ["--charset=UTF-8"]
   s.require_paths = ["lib"]
   s.rubyforge_project = %q{rspec}
   s.rubygems_version = %q{1.3.7}
-  s.summary = %q{rspec-core-2.0.0.beta.17}
+  s.summary = %q{rspec-core-2.0.0.beta.19}
   s.test_files = [
     "spec/autotest/failed_results_re_spec.rb",
      "spec/autotest/rspec_spec.rb",
+     "spec/rspec/core/command_line_configuration_spec.rb",
      "spec/rspec/core/command_line_spec.rb",
      "spec/rspec/core/configuration_options_spec.rb",
      "spec/rspec/core/configuration_spec.rb",
@@ -177,12 +190,14 @@ Gem::Specification.new do |s|
      "spec/rspec/core/formatters/progress_formatter_spec.rb",
      "spec/rspec/core/formatters/snippet_extractor_spec.rb",
      "spec/rspec/core/formatters/text_mate_formatter_spec.rb",
+     "spec/rspec/core/hooks_filtering_spec.rb",
      "spec/rspec/core/hooks_spec.rb",
      "spec/rspec/core/kernel_extensions_spec.rb",
      "spec/rspec/core/let_spec.rb",
      "spec/rspec/core/metadata_spec.rb",
      "spec/rspec/core/option_parser_spec.rb",
      "spec/rspec/core/pending_example_spec.rb",
+     "spec/rspec/core/reporter_spec.rb",
      "spec/rspec/core/resources/a_bar.rb",
      "spec/rspec/core/resources/a_foo.rb",
      "spec/rspec/core/resources/a_spec.rb",
@@ -204,19 +219,19 @@ Gem::Specification.new do |s|
     s.specification_version = 3
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
-      s.add_development_dependency(%q<rspec-expectations>, [">= 2.0.0.beta.17"])
-      s.add_development_dependency(%q<rspec-mocks>, [">= 2.0.0.beta.17"])
+      s.add_development_dependency(%q<rspec-expectations>, [">= 2.0.0.beta.19"])
+      s.add_development_dependency(%q<rspec-mocks>, [">= 2.0.0.beta.19"])
       s.add_development_dependency(%q<cucumber>, [">= 0.5.3"])
       s.add_development_dependency(%q<autotest>, [">= 4.2.9"])
     else
-      s.add_dependency(%q<rspec-expectations>, [">= 2.0.0.beta.17"])
-      s.add_dependency(%q<rspec-mocks>, [">= 2.0.0.beta.17"])
+      s.add_dependency(%q<rspec-expectations>, [">= 2.0.0.beta.19"])
+      s.add_dependency(%q<rspec-mocks>, [">= 2.0.0.beta.19"])
       s.add_dependency(%q<cucumber>, [">= 0.5.3"])
       s.add_dependency(%q<autotest>, [">= 4.2.9"])
     end
   else
-    s.add_dependency(%q<rspec-expectations>, [">= 2.0.0.beta.17"])
-    s.add_dependency(%q<rspec-mocks>, [">= 2.0.0.beta.17"])
+    s.add_dependency(%q<rspec-expectations>, [">= 2.0.0.beta.19"])
+    s.add_dependency(%q<rspec-mocks>, [">= 2.0.0.beta.19"])
     s.add_dependency(%q<cucumber>, [">= 0.5.3"])
     s.add_dependency(%q<autotest>, [">= 4.2.9"])
   end

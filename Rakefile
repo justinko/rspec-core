@@ -31,7 +31,10 @@ begin
 #{"*"*50}
 
   Thank you for installing #{gem.summary}
-  
+
+  Please be sure to look at Upgrade.markdown to see what might have changed
+  since the last release.
+
 #{"*"*50}
 EOM
   end

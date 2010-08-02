@@ -254,9 +254,15 @@ module RSpec::Core
         order.should == [3,2,1]
       end
 
-      it "runs before all, before each, example, after each, after all, in that order" do
-        group = ExampleGroup.describe
+      it "runs before_all_defined_in_config, before all, before each, example, after each, after all, after_all_defined_in_config in that order" do
         order = []
+
+        RSpec.configure do |c|
+          c.before(:all) { order << :before_all_defined_in_config }
+          c.after(:all) { order << :after_all_defined_in_config }
+        end
+
+        group = ExampleGroup.describe
         group.before(:all)  { order << :top_level_before_all  }
         group.before(:each) { order << :before_each }
         group.after(:each)  { order << :after_each  }
@@ -274,6 +280,7 @@ module RSpec::Core
         group.run_all
 
         order.should == [
+          :before_all_defined_in_config,
           :top_level_before_all,
           :before_each,
           :top_level_example,
@@ -286,7 +293,8 @@ module RSpec::Core
           :nested_example_2,
           :after_each,
           :nested_after_all,
-          :top_level_after_all
+          :top_level_after_all,
+          :after_all_defined_in_config
         ]
       end
 
@@ -366,12 +374,6 @@ module RSpec::Core
         group.examples.size.should == 1
       end
 
-      it "allows adding an example using 'its'" do
-        group = ExampleGroup.describe
-        group.its(:some_method) { }
-        group.examples.size.should == 1
-      end
-
       it "exposes all examples at examples" do
         group = ExampleGroup.describe
         group.it("should do something 1") { }
@@ -392,7 +394,7 @@ module RSpec::Core
 
     end
 
-    describe Object, "describing nested example_groups", :little_less_nested => 'yep' do 
+    describe Object, "describing nested example_groups", :little_less_nested => 'yep' do
 
       describe "A sample nested group", :nested_describe => "yep" do
         it "sets the described class to the constant Object" do
@@ -538,6 +540,24 @@ module RSpec::Core
         end
         its("name.size") { should == 4 }
         its("name.size.class") { should == Fixnum }
+      end
+
+      context "calling and overriding super" do
+        it "calls to the subject defined in the parent group" do
+          group = ExampleGroup.describe(Array) do
+            subject { [1, 'a'] }
+
+            its(:last) { should == 'a' }
+
+            describe '.first' do
+              def subject; super().first; end
+
+              its(:next) { should == 2 }
+            end
+          end
+
+          group.run_all.should be_true
+        end
       end
     end
 

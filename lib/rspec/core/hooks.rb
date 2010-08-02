@@ -24,21 +24,19 @@ module RSpec
       end
 
       class BeforeHook < Hook
-        def run_in(example)
-          example ? example.instance_eval(&self) : call
+        def run_in(example_group_instance)
+          if example_group_instance
+            example_group_instance.instance_eval(&self)
+          else
+            call
+          end
         end
       end
 
       class AfterHook < Hook
-        def run_in(example)
-          if example
-            begin
-              example.instance_eval(&self)
-            rescue Exception => e
-              if example.respond_to?(:example)
-                example.example.set_exception(e)
-              end
-            end
+        def run_in(example_group_instance)
+          if example_group_instance
+            example_group_instance.instance_eval_with_rescue(&self)
           else
             call
           end
@@ -58,32 +56,32 @@ module RSpec
       end
 
       class BeforeHooks < HookCollection
-        def run_all(example)
-          each {|h| h.run_in(example) }
+        def run_all(example_group_instance)
+          each {|h| h.run_in(example_group_instance) }
         end
 
-        def run_all!(example)
-          shift.run_in(example) until empty?
+        def run_all!(example_group_instance)
+          shift.run_in(example_group_instance) until empty?
         end
       end
 
       class AfterHooks < HookCollection
-        def run_all(example)
-          reverse.each {|h| h.run_in(example) }
+        def run_all(example_group_instance)
+          reverse.each {|h| h.run_in(example_group_instance) }
         end
 
-        def run_all!(example)
-          pop.run_in(example) until empty?
+        def run_all!(example_group_instance)
+          pop.run_in(example_group_instance) until empty?
         end
       end
 
       class AroundHooks < HookCollection; end
 
       def hooks
-        @hooks ||= { 
+        @hooks ||= {
           :around => { :each => AroundHooks.new },
-          :before => { :each => BeforeHooks.new, :all => BeforeHooks.new, :suite => BeforeHooks.new }, 
-          :after => { :each => AfterHooks.new, :all => AfterHooks.new, :suite => AfterHooks.new } 
+          :before => { :each => BeforeHooks.new, :all => BeforeHooks.new, :suite => BeforeHooks.new },
+          :after => { :each => AfterHooks.new, :all => AfterHooks.new, :suite => AfterHooks.new }
         }
       end
 
@@ -101,22 +99,22 @@ module RSpec
 
       # Runs all of the blocks stored with the hook in the context of the
       # example. If no example is provided, just calls the hook directly.
-      def run_hook(hook, scope, example=nil)
-        hooks[hook][scope].run_all(example)
+      def run_hook(hook, scope, example_group_instance=nil)
+        hooks[hook][scope].run_all(example_group_instance)
       end
 
       # Just like run_hook, except it removes the blocks as it evalutes them,
       # ensuring that they will only be run once.
-      def run_hook!(hook, scope, example)
-        hooks[hook][scope].run_all!(example)
+      def run_hook!(hook, scope, example_group_instance)
+        hooks[hook][scope].run_all!(example_group_instance)
       end
 
-      def run_hook_filtered(hook, scope, group, example)
-        find_hook(hook, scope, group).run_all(example)
+      def run_hook_filtered(hook, scope, group, example_group_instance)
+        find_hook(hook, scope, group).run_all(example_group_instance)
       end
 
-      def find_hook(hook, scope, group)
-        hooks[hook][scope].find_hooks_for(group)
+      def find_hook(hook, scope, example_group_class)
+        hooks[hook][scope].find_hooks_for(example_group_class)
       end
     end
   end

@@ -49,7 +49,7 @@ module RSpec
 #{"*"*50}
 :#{key} is not allowed
 
-RSpec reserves some hash keys for its own internal use, 
+RSpec reserves some hash keys for its own internal use,
 including :#{key}, which is used on:
 
   #{caller(0)[4]}.
@@ -157,14 +157,14 @@ EOM
         line_number = file_and_line_number(metadata)[1] if file_and_line_number(metadata)
         line_number && line_number.to_i
       end
-      
+
       def location_from(metadata)
         "#{metadata[:file_path]}:#{metadata[:line_number]}"
       end
 
       def file_and_line_number(metadata)
         entry = candidate_entries_from_caller(metadata).first
-        entry && entry.split(":")
+        entry && entry.match(/(.+?):(\d+)(|:\d+)/)[1..2]
       end
 
       def candidate_entries_from_caller(metadata)

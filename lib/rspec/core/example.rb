@@ -16,7 +16,7 @@ module RSpec
         @example_group_class, @options, @example_block = example_group_class, options, example_block
         @metadata  = @example_group_class.metadata.for_example(desc, options)
         @exception = nil
-        @in_block  = false
+        @pending_declared_in_example = @in_block = false
       end
 
       def example_group
@@ -32,6 +32,10 @@ module RSpec
         @in_block
       end
 
+      def pending?
+        !!pending
+      end
+
       def run(example_group_instance, reporter)
         @example_group_instance = example_group_instance
         @example_group_instance.example = self
@@ -40,21 +44,20 @@ module RSpec
 
         begin
           unless pending
-            with_around_hooks do
-              begin
-                run_before_each
-                @in_block = true
-                with_pending_capture &@example_block 
-              rescue Exception => e
-                set_exception(e)
-              ensure
-                @in_block = false
-                run_after_each
+            with_pending_capture do
+              with_around_hooks do
+                begin
+                  run_before_each
+                  @in_block = true
+                  @example_group_instance.instance_eval(&@example_block)
+                rescue Exception => e
+                  set_exception(e)
+                ensure
+                  @in_block = false
+                  run_after_each
+                end
               end
-              # FUCKME (DC): I really want to move the call below to the end of
-              # the with_around_hooks method, but it adds 4% to the run time.
-              # Why? (footnote - Dan North made me write this comment)
-            end.call
+            end
           end
         rescue Exception => e
           set_exception(e)
@@ -72,15 +75,15 @@ module RSpec
 
     private
 
-      def with_pending_capture
+      def with_pending_capture(&block)
         @pending_declared_in_example = catch(:pending_declared_in_example) do
-          @example_group_instance.instance_eval(&@example_block)
+          block.call
           throw :pending_declared_in_example, false
         end
       end
 
       def with_around_hooks(&wrapped_example)
-        @example_group_class.eval_around_eachs(@example_group_instance, wrapped_example)
+        @example_group_class.eval_around_eachs(@example_group_instance, wrapped_example).call
       end
 
       def start(reporter)
@@ -114,20 +117,20 @@ module RSpec
       end
 
       def run_before_each
-        @example_group_instance._setup_mocks if @example_group_instance.respond_to?(:_setup_mocks)
+        @example_group_instance.setup_mocks_for_rspec if @example_group_instance.respond_to?(:setup_mocks_for_rspec)
         @example_group_class.eval_before_eachs(@example_group_instance)
       end
 
       def run_after_each
         @example_group_class.eval_after_eachs(@example_group_instance)
-        @example_group_instance._verify_mocks if @example_group_instance.respond_to?(:_verify_mocks)
+        @example_group_instance.verify_mocks_for_rspec if @example_group_instance.respond_to?(:verify_mocks_for_rspec)
       ensure
-        @example_group_instance._teardown_mocks if @example_group_instance.respond_to?(:_teardown_mocks)
+        @example_group_instance.teardown_mocks_for_rspec if @example_group_instance.respond_to?(:teardown_mocks_for_rspec)
       end
 
       def assign_auto_description
         if description.empty?
-          metadata[:description] = RSpec::Matchers.generated_description 
+          metadata[:description] = RSpec::Matchers.generated_description
           RSpec::Matchers.clear_generated_description
         end
       end

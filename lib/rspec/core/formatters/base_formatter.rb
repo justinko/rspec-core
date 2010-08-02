@@ -5,57 +5,42 @@ module RSpec
       class BaseFormatter
         include Helpers
         attr_accessor :example_group
-        attr_reader :example_count, :duration, :examples, :output
+        attr_reader :duration, :examples, :output
+        attr_reader :example_count, :pending_count, :failure_count
+        attr_reader :failed_examples, :pending_examples
 
         def initialize(output)
           @output = output
-          @example_count = 0
+          @example_count = @pending_count = @failure_count = 0
           @examples = []
+          @failed_examples = []
+          @pending_examples = []
           @example_group = nil
-        end
-
-        def pending_examples
-          @pending_examples ||= ::RSpec.world.find(examples, :execution_result => { :status => 'pending' })
-        end
-
-        def pending_count
-          pending_examples.size
-        end
-
-        def failed_examples
-          @failed_examples ||= ::RSpec.world.find(examples, :execution_result => { :status => 'failed' })
-        end
-
-        def failure_count
-          failed_examples.size
-        end
-
-        def report(count)
-          sync_output do
-            start(count)
-            begin
-              yield self
-            ensure
-              stop
-              dump(@duration)
-              close
-            end
-          end
         end
 
         # This method is invoked before any examples are run, right after
         # they have all been collected. This can be useful for special
         # formatters that need to provide progress on feedback (graphical ones)
         #
-        # This method will only be invoked once, and the next one to be invoked
-        # is #add_example_group
+        # This will only be invoked once, and the next one to be invoked
+        # is #example_group_started
         def start(example_count)
-          @start = Time.now
+          start_sync_output
           @example_count = example_count
         end
 
-        def stop
-          @duration = Time.now - @start
+        # This method is invoked at the beginning of the execution of each example group.
+        # +example_group+ is the example_group.
+        #
+        # The next method to be invoked after this is +example_passed+,
+        # +example_pending+, or +example_finished+
+        def example_group_started(example_group)
+          @example_group = example_group
+        end
+
+        def add_example_group(example_group)
+          RSpec.deprecate("add_example_group", "example_group_started")
+          example_group_started(example_group)
         end
 
         def example_started(example)
@@ -66,34 +51,22 @@ module RSpec
         end
 
         def example_pending(example)
+          @pending_examples << example
         end
 
         def example_failed(example)
+          @failed_examples << example
         end
 
         def message(message)
         end
 
-        # This method is invoked at the beginning of the execution of each example group.
-        # +example_group+ is the example_group.
-        #
-        # The next method to be invoked after this is +example_passed+,
-        # +example_pending+, or +example_finished+
-        def add_example_group(example_group)
-          @example_group = example_group
-        end
-
-        def dump(duration)
-          start_dump(duration)
-          dump_failures
-          dump_summary
-          dump_pending
+        def stop
         end
 
         # This method is invoked after all of the examples have executed. The next method
         # to be invoked after this one is #dump_failure (once for each failed example),
-        def start_dump(duration)
-          @duration = duration
+        def start_dump
         end
 
         # Dumps detailed information about each example failure.
@@ -101,7 +74,11 @@ module RSpec
         end
 
         # This method is invoked after the dumping of examples and failures.
-        def dump_summary
+        def dump_summary(duration, example_count, failure_count, pending_count)
+          @duration = duration
+          @example_count = example_count
+          @failure_count = failure_count
+          @pending_count = pending_count
         end
 
         # This gets invoked after the summary if option is set to do so.
@@ -110,6 +87,7 @@ module RSpec
 
         # This method is invoked at the very end. Allows the formatter to clean up, like closing open streams.
         def close
+          restore_sync_output
         end
 
         def format_backtrace(backtrace, example)
@@ -118,7 +96,7 @@ module RSpec
 
           cleansed = backtrace.select { |line| backtrace_line(line) }
           # Kick the describe stack info off the list, just keep the line the problem happened on from that file
-          # cleansed = [cleansed.detect { |line| line.split(':').first == example.metadata[:caller].split(':').first }] if cleansed.size > 1 
+          # cleansed = [cleansed.detect { |line| line.split(':').first == example.metadata[:caller].split(':').first }] if cleansed.size > 1
           cleansed.empty? ? backtrace : cleansed
         end
 
@@ -138,11 +116,11 @@ module RSpec
 
         def read_failed_line(exception, example)
           original_file = example.file_path.to_s.downcase
-          matching_line = exception.backtrace.detect { |line| line.split(':').first.downcase == original_file.downcase }
+          matching_line = exception.backtrace.detect { |line| line.match(/(.+?):(\d+)(|:\d+)/)[1].downcase == original_file.downcase }
 
           return "Unable to find matching line from backtrace" if matching_line.nil?
 
-          file_path, line_number = matching_line.split(':')
+          file_path, line_number = matching_line.match(/(.+?):(\d+)(|:\d+)/)[1..2]
           if File.exist?(file_path)
             open(file_path, 'r') { |f| f.readlines[line_number.to_i - 1] }
           else
@@ -150,13 +128,12 @@ module RSpec
           end
         end
 
-        def sync_output
-          begin
-            old_sync, output.sync = output.sync, true if output_supports_sync
-            yield
-          ensure
-            output.sync = old_sync if output_supports_sync and !output.closed?
-          end
+        def start_sync_output
+          @old_sync, output.sync = output.sync, true if output_supports_sync
+        end
+
+        def restore_sync_output
+          output.sync = @old_sync if output_supports_sync and !output.closed?
         end
 
         def output_supports_sync

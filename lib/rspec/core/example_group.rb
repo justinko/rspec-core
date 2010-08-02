@@ -54,20 +54,31 @@ module RSpec
       end
 
       alias_example_to :it
-      alias_example_to :its, :attribute_of_subject => true
       alias_example_to :specify
       alias_example_to :focused, :focused => true
       alias_example_to :pending, :pending => true
 
-      def self.it_should_behave_like(*names)
-        names.each do |name|
-          begin
-            module_eval &RSpec.world.shared_example_groups[name]
-          rescue ArgumentError
-            raise "Could not find shared example group named #{name.inspect}"
+      def self.define_shared_group_method(new_name, report_label=nil)
+        module_eval(<<-END_RUBY, __FILE__, __LINE__)
+          def self.#{new_name}(name, &customization_block)
+            shared_block = world.shared_example_groups[name]
+            raise "Could not find shared example group named \#{name.inspect}" unless shared_block
+
+            describe("#{report_label || "it should behave like"} \#{name}") do
+              module_eval &shared_block
+              module_eval &customization_block if customization_block
+            end
           end
-        end
+        END_RUBY
       end
+
+      define_shared_group_method :it_should_behave_like
+
+      class << self
+        alias_method :alias_it_should_behave_like_to, :define_shared_group_method
+      end
+
+      alias_it_should_behave_like_to :it_behaves_like, "behaves like"
 
       def self.examples
         @examples ||= []
@@ -82,7 +93,7 @@ module RSpec
       end
 
       def self.metadata
-        @metadata 
+        @metadata if defined?(@metadata)
       end
 
       def self.superclass_metadata
@@ -111,7 +122,7 @@ module RSpec
 
       def self.subclass(parent, args, &example_group_block)
         subclass = Class.new(parent)
-        subclass.set_it_up(*args) 
+        subclass.set_it_up(*args)
         subclass.module_eval(&example_group_block) if example_group_block
         subclass
       end
@@ -128,6 +139,10 @@ module RSpec
         @_ancestors ||= super().select {|a| a < RSpec::Core::ExampleGroup}
       end
 
+      def self.top_level?
+        ancestors.size == 1
+      end
+
       def self.set_it_up(*args)
         @metadata = RSpec::Core::Metadata.new(superclass_metadata).process(*args)
 
@@ -140,23 +155,22 @@ module RSpec
         @before_all_ivars ||= {}
       end
 
-      def self.eval_before_alls(example)
+      def self.store_before_all_ivars(example_group_instance)
+        example_group_instance.instance_variables.each { |ivar| 
+          before_all_ivars[ivar] = example_group_instance.instance_variable_get(ivar)
+        }
+      end
+
+      def self.assign_before_all_ivars(ivars, example_group_instance)
+        ivars.each { |ivar, val| example_group_instance.instance_variable_set(ivar, val) }
+      end
+
+      def self.eval_before_alls(example_group_instance)
         return if descendant_filtered_examples.empty?
-        superclass.before_all_ivars.each { |ivar, val| example.instance_variable_set(ivar, val) }
-        world.run_hook_filtered(:before, :all, self, example)
-
-        run_hook!(:before, :all, example)
-        example.instance_variables.each { |ivar| before_all_ivars[ivar] = example.instance_variable_get(ivar) }
-      end
-
-      def self.eval_before_eachs(example)
-        world.run_hook_filtered(:before, :each, self, example)
-        ancestors.reverse.each { |ancestor| ancestor.run_hook(:before, :each, example) }
-      end
-
-      def self.eval_after_eachs(example)
-        ancestors.each { |ancestor| ancestor.run_hook(:after, :each, example) }
-        world.run_hook_filtered(:after, :each, self, example)
+        assign_before_all_ivars(superclass.before_all_ivars, example_group_instance)
+        world.run_hook_filtered(:before, :all, self, example_group_instance) if top_level?
+        run_hook!(:before, :all, example_group_instance)
+        store_before_all_ivars(example_group_instance)
       end
 
       def self.eval_around_eachs(example_group_instance, wrapped_example)
@@ -166,20 +180,31 @@ module RSpec
         end
       end
 
+      def self.eval_before_eachs(example_group_instance)
+        world.run_hook_filtered(:before, :each, self, example_group_instance)
+        ancestors.reverse.each { |ancestor| ancestor.run_hook(:before, :each, example_group_instance) }
+      end
+
+      def self.eval_after_eachs(example_group_instance)
+        ancestors.each { |ancestor| ancestor.run_hook(:after, :each, example_group_instance) }
+        world.run_hook_filtered(:after, :each, self, example_group_instance)
+      end
+
+      def self.eval_after_alls(example_group_instance)
+        return if descendant_filtered_examples.empty?
+        assign_before_all_ivars(before_all_ivars, example_group_instance)
+        run_hook!(:after, :all, example_group_instance)
+        world.run_hook_filtered(:after, :all, self, example_group_instance) if top_level?
+      end
+
       def self.around_hooks
         (world.find_hook(:around, :each, self) + ancestors.reverse.map{|a| a.find_hook(:around, :each, self)}).flatten
       end
 
-      def self.eval_after_alls(example)
-        return if descendant_filtered_examples.empty?
-        before_all_ivars.each { |ivar, val| example.instance_variable_set(ivar, val) }
-        run_hook!(:after, :all, example)
-        world.run_hook_filtered(:after, :all, self, example)
-      end
-
       def self.run(reporter)
+        @reporter = reporter
         example_group_instance = new
-        reporter.add_example_group(self)
+        reporter.example_group_started(self)
         begin
           eval_before_alls(example_group_instance)
           result_for_this_group = run_examples(example_group_instance, reporter)
@@ -236,6 +261,14 @@ module RSpec
         self.class.describes
       end
 
+      def instance_eval_with_rescue(&hook)
+        begin
+          instance_eval(&hook)
+        rescue Exception => e
+          example.set_exception(e)
+        end
+      end
+
     private
 
       def self.extended_modules #:nodoc:
@@ -248,7 +281,6 @@ module RSpec
           :extend => extended_modules
         }
       end
-
     end
   end
 end
