@@ -26,6 +26,14 @@ module RSpec
               exception.message.split("\n").each do |line|
                 output.puts "#{padding}#{red(line)}"
               end
+              
+              example.example_group.ancestors.push(example.example_group).each do |group|
+                if group.metadata[:shared_group_name]
+                  output.puts "#{padding}Shared Example Group: \"#{group.metadata[:shared_group_name]}\" called from " +                               
+                              "#{backtrace_line(group.metadata[:example_group][:location])}"
+                  break
+                end
+              end
             end
 
             format_backtrace(exception.backtrace, example).each do |backtrace_info|
