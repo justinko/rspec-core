@@ -20,9 +20,11 @@ Feature: Shared example group
         end
       end
 
-      describe "#first" do
-        it "returns the first item" do
-          @instance.first.should == 7
+      describe "#include?" do
+        context "with an an item in the collection" do
+          it "returns true" do
+            @instance.include?(7).should be_true
+          end
         end
       end
     end
@@ -43,15 +45,17 @@ Feature: Shared example group
         it should behave like a collection object
           initialized with 3 items
             has three items
-          #first
-            returns the first item
+          #include?
+            with an an item in the collection
+              returns true
 
       Set
         it should behave like a collection object
           initialized with 3 items
             has three items
-          #first
-            returns the first item
+          #include?
+            with an an item in the collection
+              returns true
       """
 
   Scenario: Using a shared example group with a block
@@ -94,6 +98,39 @@ Feature: Shared example group
         it should behave like a collection object
           <<
             adds objects to the end of the collection
+      """
+
+  @wip
+  Scenario: Passing parameters to a shared example group
+    Given a file named "shared_example_group_params_spec.rb" with:
+    """
+    shared_examples_for "a measurable object" do |measurement_method, measurement|
+      it "should return #{measurement} from ##{measurement_method}" do
+        subject.send(measurement_method).should == measurement
+      end
+    end
+
+    describe Array, "with 3 items" do
+      subject { [1, 2, 3] }
+      it_should_behave_like "a measurable object", :size, 3
+    end
+
+    describe String, "of 6 characters" do
+      subject { "FooBar" }
+      it_should_behave_like "a measurable object", :length, 6
+    end
+    """
+    When I run "rspec shared_example_group_params_spec.rb --format documentation"
+    Then the output should contain "2 examples, 0 failures"
+    And the output should contain:
+      """
+      Array with 3 items
+        it should behave like a measurable object
+          should return 3 from #size
+
+      String of 6 characters
+        it should behave like a measurable object
+          should return 6 from #length
       """
 
   Scenario: Aliasing "it_should_behave_like" to "it_has_behavior"

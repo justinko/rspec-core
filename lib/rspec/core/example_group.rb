@@ -1,6 +1,8 @@
 module RSpec
   module Core
     class ExampleGroup
+      extend  Extensions::ModuleEvalWithArgs
+      include Extensions::InstanceEvalWithArgs
       extend  Hooks
       include Subject
       include Let
@@ -33,6 +35,7 @@ module RSpec
 
         delegate_to_metadata :description, :describes, :file_path
         alias_method :display_name, :description
+        alias_method :described_class, :describes
       end
 
       def self.define_example_method(name, extra_options={})
@@ -60,12 +63,12 @@ module RSpec
 
       def self.define_shared_group_method(new_name, report_label=nil)
         module_eval(<<-END_RUBY, __FILE__, __LINE__)
-          def self.#{new_name}(name, &customization_block)
+          def self.#{new_name}(name, *args, &customization_block)
             shared_block = world.shared_example_groups[name]
             raise "Could not find shared example group named \#{name.inspect}" unless shared_block
 
             describe("#{report_label || "it should behave like"} \#{name}") do
-              module_eval &shared_block
+              module_eval_with_args *args, &shared_block
               module_eval &customization_block if customization_block
             end
           end
@@ -176,7 +179,7 @@ module RSpec
       def self.eval_around_eachs(example_group_instance, wrapped_example)
         around_hooks.reverse.inject(wrapped_example) do |wrapper, hook|
           def wrapper.run; call; end
-          lambda { example_group_instance.instance_exec(wrapper, &hook) }
+          lambda { example_group_instance.instance_eval_with_args(wrapper, &hook) }
         end
       end
 
@@ -258,7 +261,7 @@ module RSpec
       end
 
       def described_class
-        self.class.describes
+        self.class.described_class
       end
 
       def instance_eval_with_rescue(&hook)
