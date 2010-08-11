@@ -231,7 +231,7 @@ module RSpec
       end
 
       def self.to_s
-        self == RSpec::Core::ExampleGroup ? 'RSpec::Core::ExampleGroup' : name
+        self == RSpec::Core::ExampleGroup ? 'RSpec::Core::ExampleGroup' : super()
       end
 
       def self.all_apply?(filters)
