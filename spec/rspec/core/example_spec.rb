@@ -24,7 +24,7 @@ describe RSpec::Core::Example, :parent_metadata => 'sample' do
 
   describe "accessing metadata within a running example" do
     it "has a reference to itself when running" do
-      example.description.should == "should have a reference to itself when running"
+      example.description.should == "has a reference to itself when running"
     end
 
     it "can access the example group's top level metadata as if it were its own" do
