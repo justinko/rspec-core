@@ -421,6 +421,61 @@ module RSpec::Core
       end
 
     end
+    
+    describe "#run" do
+      let(:reporter) { double("reporter").as_null_object }
+
+      context "with all examples passing" do
+        it "returns true" do
+          group = describe("something") do
+            it "does something" do
+              # pass
+            end
+            describe ("nested") do
+              it "does something else" do
+                # pass
+              end
+            end
+          end
+
+          group.run(reporter).should be_true
+        end
+      end
+
+      context "with top level example failing" do
+        it "returns false" do
+          group = describe("something") do
+            it "does something (wrong - fail)" do
+              raise "fail"
+            end
+            describe ("nested") do
+              it "does something else" do
+                # pass
+              end
+            end
+          end
+
+          group.run(reporter).should be_false
+        end
+      end
+
+      context "with nested example failing" do
+        it "returns true" do
+          group = describe("something") do
+            it "does something" do
+              # pass
+            end
+            describe ("nested") do
+              it "does something else (wrong -fail)" do
+                raise "fail"
+              end
+            end
+          end
+
+          group.run(reporter).should be_false
+        end
+      end
+    end
 
     describe "#run_examples" do
 
@@ -578,61 +633,6 @@ module RSpec::Core
         end
 
         group.top_level_description.should == "top"
-      end
-    end
-
-    describe "#run" do
-      let(:reporter) { double("reporter").as_null_object }
-
-      context "with all examples passing" do
-        it "returns true" do
-          group = describe("something") do
-            it "does something" do
-              # pass
-            end
-            describe ("nested") do
-              it "does something else" do
-                # pass
-              end
-            end
-          end
-
-          group.run(reporter).should be_true
-        end
-      end
-
-      context "with top level example failing" do
-        it "returns false" do
-          group = describe("something") do
-            it "does something (wrong - fail)" do
-              raise "fail"
-            end
-            describe ("nested") do
-              it "does something else" do
-                # pass
-              end
-            end
-          end
-
-          group.run(reporter).should be_false
-        end
-      end
-
-      context "with nested example failing" do
-        it "returns true" do
-          group = describe("something") do
-            it "does something" do
-              # pass
-            end
-            describe ("nested") do
-              it "does something else (wrong -fail)" do
-                raise "fail"
-              end
-            end
-          end
-
-          group.run(reporter).should be_false
-        end
       end
     end
 
