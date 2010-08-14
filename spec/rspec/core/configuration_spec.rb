@@ -460,7 +460,7 @@ module RSpec::Core
       it "includes each one before deciding whether to include the next" do
         mod1 = Module.new do
           def self.included(host)
-            host.metadata[:foo] = :bar
+            host.metadata[:_foo] = :bar
           end
         end
         mod2 = Module.new
@@ -468,7 +468,7 @@ module RSpec::Core
         group = ExampleGroup.describe("group")
 
         config.include(mod1)
-        config.include(mod2, :foo => :bar)
+        config.include(mod2, :_foo => :bar)
         config.configure_group(group)
         group.included_modules.should include(mod1)
         group.included_modules.should include(mod2)

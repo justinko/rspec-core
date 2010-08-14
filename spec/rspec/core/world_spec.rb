@@ -60,13 +60,11 @@ module RSpec::Core
       end
 
       it "finds one group when searching for :pending => true" do
-        @world.apply_inclusion_filters(@example_groups, :pending => true ).should == [@bg2]
+        @world.apply_inclusion_filters(@example_groups, :pending => true).should == [@bg2]
       end
 
       it "finds matching groups when filtering on arbitrary metadata with a number" do
-        pending("discover why this example fails when the whole suite is run, but passes when just this group is run") do
-          @world.apply_inclusion_filters(@example_groups, :foo => 1 ).should == [@bg1]
-        end
+        @world.apply_inclusion_filters(@example_groups, :foo => 1).should == [@bg1]
       end
 
       it "finds matching groups when filtering on arbitrary metadata with an array" do
