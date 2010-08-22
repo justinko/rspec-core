@@ -28,13 +28,13 @@ describe RSpec::Core do
 
   end
   
-  describe '#use_expectations' do
+  describe '#use_expectations?' do
     
     context 'given @use_expectations is true' do
       before { RSpec.instance_variable_set(:@use_expectations, true) }
       
       it 'returns true' do
-        RSpec.use_expectations.should be_true
+        RSpec.should be_use_expectations
       end
     end
     
@@ -42,7 +42,7 @@ describe RSpec::Core do
       before { RSpec.instance_variable_set(:@use_expectations, false) }
       
       it 'returns false' do
-        RSpec.use_expectations.should be_false
+        RSpec.should_not be_use_expectations
       end
     end
     
@@ -52,7 +52,7 @@ describe RSpec::Core do
       end
       
       it 'returns true' do
-        RSpec.use_expectations.should be_true
+        RSpec.should be_use_expectations
       end
     end
   

@@ -61,7 +61,7 @@ module RSpec
     yield configuration if block_given?
   end
   
-  def self.use_expectations
+  def self.use_expectations?
     instance_variable_defined?(:@use_expectations) ? @use_expectations : true
   end
   
@@ -72,6 +72,6 @@ end
 
 require 'rspec/core/backward_compatibility'
 
-require 'rspec/expectations' if RSpec.use_expectations
+require 'rspec/expectations' if RSpec.use_expectations?
 
 require 'rspec/monkey'
