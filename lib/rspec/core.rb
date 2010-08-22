@@ -60,11 +60,18 @@ module RSpec
   def self.configure
     yield configuration if block_given?
   end
+  
+  def self.use_expectations
+    instance_variable_defined?(:@use_expectations) ? @use_expectations : true
+  end
+  
+  def self.use_expectations=(val)
+    @use_expectations = val
+  end
 end
 
 require 'rspec/core/backward_compatibility'
 
-# TODO - make this configurable with default 'on'
-require 'rspec/expectations'
+require 'rspec/expectations' if RSpec.use_expectations
 
 require 'rspec/monkey'
