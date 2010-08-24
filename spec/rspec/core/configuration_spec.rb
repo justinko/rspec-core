@@ -74,34 +74,6 @@ module RSpec::Core
 
     end
 
-    describe "expectation_framework" do
-
-      it "defaults to :rspec" do
-        config.should_receive(:require).with('rspec/core/expecting/with_rspec')
-        config.require_expectation_framework_adapter
-      end
-
-      [:rspec].each do |framework|
-        it "uses #{framework.inspect} framework when set explicitly" do
-          config.should_receive(:require).with("rspec/core/expecting/with_#{framework}")
-          config.mock_framework = framework
-          config.require_expectation_framework_adapter
-        end
-      end
-
-      it "supports expect_with for backward compatibility with rspec-1.x" do
-        config.should_receive(:require).with('rspec/core/expecting/with_rspec')
-        config.mock_with :rspec
-        config.require_expectation_framework_adapter
-      end
-
-      it "raises ArgumentError if framework is not supported" do
-        config.expectation_framework = :not_supported
-        expect { config.require_expectation_framework_adapter }.to raise_error(ArgumentError)
-      end
-
-    end
-
     context "setting the files to run" do
 
       it "loads files not following pattern if named explicitly" do

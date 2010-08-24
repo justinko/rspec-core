@@ -134,19 +134,6 @@ module RSpec
         end
       end
 
-      def expect_with(expectation_framework)
-        settings[:expectation_framework] = expectation_framework
-      end
-
-      def require_expectation_framework_adapter
-        require case expectation_framework.to_s
-        when /rspec/i
-          'rspec/core/expecting/with_rspec'
-        else
-          raise ArgumentError, "#{expectation_framework.inspect} is not supported"
-        end
-      end
-
       def full_backtrace=(bool)
         settings[:backtrace_clean_patterns] = []
       end
