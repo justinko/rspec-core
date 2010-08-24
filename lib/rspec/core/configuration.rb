@@ -134,6 +134,19 @@ module RSpec
         end
       end
 
+      def expect_with(expectation_framework)
+        settings[:expectation_framework] = expectation_framework
+      end
+
+      def require_expectation_framework_adapter
+        require case expectation_framework.to_s
+        when /rspec/i
+          'rspec/core/expecting/with_rspec'
+        else
+          raise ArgumentError, "#{expectation_framework.inspect} is not supported"
+        end
+      end
+
       def full_backtrace=(bool)
         settings[:backtrace_clean_patterns] = []
       end
@@ -273,8 +286,12 @@ EOM
       end
 
       def filter_run_including(options={})
-        # TODO (DC 2010-07-03) this should probably warn when the unless clause returns true
-        self.filter = options unless filter and filter[:line_number] || filter[:full_description]
+        if filter and filter[:line_number] || filter[:full_description]
+          warn "Filtering by #{options.inspect} is not possible since " \
+               "you are already filtering by #{filter.inspect}"
+        else
+          self.filter = options
+        end
       end
 
       alias_method :filter_run, :filter_run_including
@@ -310,6 +327,11 @@ EOM
         RSpec::Core::ExampleGroup.send(:include, RSpec::Core::MockFrameworkAdapter)
       end
       
+      def configure_expectation_framework
+        require_expectation_framework_adapter
+        RSpec::Core::ExampleGroup.send(:include, RSpec::Core::ExpectationFrameworkAdapter)
+      end
+
       def configure_expectation_framework
         require_expectation_framework_adapter
         RSpec::Core::ExampleGroup.send(:include, RSpec::Core::ExpectationFrameworkAdapter)

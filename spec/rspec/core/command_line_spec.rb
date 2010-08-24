@@ -43,6 +43,14 @@ module RSpec::Core
         CommandLine.new(config_options, config, world)
       end
 
+      let(:world) do
+        RSpec::Core::World.new
+      end
+
+      let(:command_line) do
+        CommandLine.new(config_options, config, world)
+      end
+
       let(:out) { ::StringIO.new }
 
       before do
@@ -54,6 +62,31 @@ module RSpec::Core
         
         world.should_receive(:announce_inclusion_filter)
         world.should_receive(:announce_exclusion_filter)
+      end
+
+      it "loads spec files" do
+        config.should_receive(:load_spec_files)
+        command_line.run(out, out)
+      end
+
+      it "configures the mock framework" do
+        config.should_receive(:configure_mock_framework)
+        command_line.run(out, out)
+      end
+
+      it "configures the expectations framework" do
+        config.should_receive(:configure_expectation_framework)
+        command_line.run(out, out)
+      end
+
+      it "announces the inclusion filter" do
+        world.should_receive(:announce_inclusion_filter)
+        command_line.run(out, out)
+      end
+
+      it "announces the exclusion filter" do
+        world.should_receive(:announce_exclusion_filter)
+        command_line.run(out, out)
       end
 
       it "runs before suite hooks" do
