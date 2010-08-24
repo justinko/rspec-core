@@ -53,17 +53,17 @@ module RSpec::Core
         config.require_expectation_framework_adapter
       end
       
-      [:rspec].each do |framework|
+      [:rspec, :test_unit].each do |framework|
         it "uses #{framework.inspect} framework when set explicitly" do
           config.should_receive(:require).with("rspec/core/expecting/with_#{framework}")
-          config.mock_framework = framework
+          config.expectation_framework = framework
           config.require_expectation_framework_adapter
         end
       end
             
       it "supports expect_with for backward compatibility with rspec-1.x" do
         config.should_receive(:require).with('rspec/core/expecting/with_rspec')
-        config.mock_with :rspec
+        config.expect_with :rspec
         config.require_expectation_framework_adapter
       end
       
